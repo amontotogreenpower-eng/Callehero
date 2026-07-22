@@ -1,17 +1,1 @@
-{
-  "name": "PUÑO CALLEJERO 3D — Torneo Mundial",
-  "short_name": "Puño 3D",
-  "description": "Juego de lucha arcade 3D: 8 luchadores, torneo, rey de mesa y fatalities.",
-  "start_url": "./",
-  "scope": "./",
-  "display": "fullscreen",
-  "orientation": "landscape",
-  "background_color": "#0c0818",
-  "theme_color": "#0c0818",
-  "lang": "es",
-  "icons": [
-    {"src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-    {"src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
-    {"src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
-  ]
-}
+{"name":"PU\u00d1O CALLEJERO 3D","short_name":"PU\u00d1O 3D","start_url":"./","display":"standalone","orientation":"landscape","background_color":"#0a0a12","theme_color":"#0a0a12","icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png"},{"src":"icon-512.png","sizes":"512x512","type":"image/png"}]}
