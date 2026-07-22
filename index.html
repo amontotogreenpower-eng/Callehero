@@ -84,6 +84,8 @@
     align-items:center;justify-content:center;background:rgba(10,8,20,.78);
     border:2px solid rgba(255,215,90,.55);border-radius:10px;font-size:22px;cursor:pointer;user-select:none}
   #camBtn:active{background:rgba(255,215,90,.3)}
+  .cr-hg{display:grid;gap:1px;width:150px;background:#0a0a12;padding:2px;
+    border:1px solid rgba(255,255,255,.15);margin:2px 0}
   .cr-tg{display:grid;gap:1px;width:178px;background:#0a0a12;padding:2px;
     border:1px solid rgba(255,255,255,.15);margin:2px 0}
   #organizer{position:fixed;left:0;top:0;bottom:0;width:min(460px,52vw);z-index:30;display:none;
@@ -209,7 +211,11 @@
       <div class="cr-sec">CARA · MOSAICO (dibuja)</div>
       <div id="cr-pal"></div>
       <div id="cr-grid"></div>
-      <button id="cr-clearface">Borrar dibujo</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button id="cr-clearface">Borrar dibujo</button>
+        <button id="cr-imgface">Imagen → cara</button>
+        <input type="file" id="cr-imgfacefile" accept="image/*" style="display:none">
+      </div>
       <div class="cr-sec">PELUCA</div>
       <label>Preset
         <select id="cr-wigPreset">
@@ -232,7 +238,26 @@
       <div class="cr-note">Frontal</div><div id="cr-tf" class="cr-tg"></div>
       <div class="cr-note">Posterior</div><div id="cr-tb" class="cr-tg"></div>
       <div class="cr-note">Lateral (ambos costados)</div><div id="cr-ts" class="cr-tg"></div>
-      <button id="cr-cleartorso">Borrar tórax</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button id="cr-cleartorso">Borrar tórax</button>
+        <button id="cr-imgtf">Imagen → frontal</button>
+        <button id="cr-imgtb">Imagen → posterior</button>
+        <input type="file" id="cr-imgtfile" accept="image/*" style="display:none">
+      </div>
+      <div class="cr-sec">PANTALONES · MOSAICO (estilo LEGO)</div>
+      <div class="cr-note">Frontal</div><div id="cr-pf" class="cr-tg"></div>
+      <div class="cr-note">Posterior</div><div id="cr-pb" class="cr-tg"></div>
+      <div class="cr-note">Lateral (ambas piernas y costados)</div><div id="cr-ps" class="cr-tg"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button id="cr-clearpants">Borrar pantalones</button>
+        <button id="cr-imgpf">Imagen → frontal</button>
+        <button id="cr-imgpb">Imagen → posterior</button>
+        <input type="file" id="cr-imgpfile" accept="image/*" style="display:none">
+      </div>
+      <div class="cr-sec">MANOS · CUBO (estilo LEGO)</div>
+      <div class="cr-note">Clic repetido = volumen (como el cabello). Se aplica a ambas manos, color piel.</div>
+      <div id="cr-hand" class="cr-hg"></div>
+      <button id="cr-clearhand">Borrar manos</button>
       <div class="cr-sec">COLORES</div>
       <div class="cr-swatches">
         <label>Piel<input type="color" id="cr-skin" value="#d8a877"></label>
@@ -306,8 +331,12 @@
       <option value="cinema">Cine</option><option value="lab">Laboratorio</option>
       <option value="imagen">Imagen cargada</option>
     </select></label>
-  <div style="display:flex;gap:6px;align-items:center">
-    <button id="org-imgbtn">Subir imagen…</button>
+  <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
+    <button id="org-img-back">Fondo…</button>
+    <button id="org-img-left">Izquierda…</button>
+    <button id="org-img-right">Derecha…</button>
+    <button id="org-img-floor">Suelo…</button>
+    <button id="org-imgclear">✕</button>
     <input type="file" id="org-img" accept="image/*" style="display:none">
     <span id="org-imgstate" style="color:#8aff9a;font-size:10px"></span>
   </div>
@@ -919,6 +948,8 @@ function buildCustom(cfg){
       hud:col.hud||'#7fa8ff',altHud:'#ff8a7f',altMap:{}},
     _skin:skin,_hair:hair,_iris:col.iris!=null?col.iris:0x3a4a5e,_face:cfg.face||'normal',_faceTex:cfg.faceTex||null,_faceLvl:cfg.faceLvl||null,_style:cfg.style||'lego',_outfit:outfit,
     _tor:{f:cfg.torsoF||null,fl:cfg.torsoFL||null,b:cfg.torsoB||null,bl:cfg.torsoBL||null,s:cfg.torsoS||null,sl:cfg.torsoSL||null},
+    _pants:{f:cfg.pantsF||null,fl:cfg.pantsFL||null,b:cfg.pantsB||null,bl:cfg.pantsBL||null,s:cfg.pantsS||null,sl:cfg.pantsSL||null},
+    _hand:cfg.hand||null,
     _wig:cfg.wig||null,_wigTop:cfg.wigTop||null,_wigPre:cfg.wigPreset||'none',
     _foot:{w:(p.footW||1),l:(p.footL||1),h:(p.footH||1),col:(col.foot!=null?col.foot:0x14100c)},
     moves:movesFrom(cfg.arch||'rusher'),
@@ -1022,9 +1053,17 @@ function buildCustom(cfg){
         U.add(R.pos(R.cyl(aw,aw*1.5,shirt),0,0,0));
         U.add(R.pos(box(aw*2,d.uarm,aw*2,shirt),0,-d.uarm/2,0));
         L.add(R.pos(box(aw*1.75,d.farm,aw*1.75,skin),0,-d.farm/2,0));
-        const cg=new THREE.TorusGeometry(aw*1.05*s,aw*.42*s,8,16,Math.PI*1.5);
-        const claw=new THREE.Mesh(cg,skin);claw.castShadow=true;
-        claw.rotation.z=Math.PI*0.75;claw.position.set(0,-aw*1.4*s,0);H.add(claw);
+        // mano: cubo mallado (esculpible por rejilla, como el cabello)
+        const HG=this._hand, hp=HG&&HG.some(rw=>/[1-9]/.test(rw));
+        if(hp){
+          for(let hr=0;hr<HN;hr++)for(let hc=0;hc<HN;hc++){
+            const L2=parseInt(HG[hr][hc]||'0',36);if(!L2)continue;
+            const dp=.85+L2*.55;
+            H.add(R.pos(box(.95,.9,dp,skin),(hc-(HN-1)/2)*.95,-(hr*.88+.8),0));
+          }
+        }else{
+          H.add(R.pos(box(aw*2.2,aw*2.2,aw*2.2,skin),0,-aw*1.2,0));
+        }
       }
       // ============ PIERNAS + PIES (editables) ============
       const lw=d.limbW*.85, ft=this._foot||{w:1,l:1,h:1,col:0x14100c}, footM=R.mkMat(ft.col);
@@ -1034,6 +1073,30 @@ function buildCustom(cfg){
         const ff=new THREE.Group();ff.rotation.z=-Math.PI/2;Fg.add(ff);
         const boot=box(lw*3.8*ft.l, lw*1.6*ft.h, lw*1.9*ft.w, footM);
         boot.position.set(lw*1.5*ft.l*s, -lw*.2*ft.h*s, 0);ff.add(boot);
+        // mosaico de pantalones (frontal/posterior/lateral) sobre muslo y espinilla
+        const PP=this._pants;
+        if(PP&&((PP.f&&PP.f.some(rw=>/[1-9]/.test(rw)))||(PP.b&&PP.b.some(rw=>/[1-9]/.test(rw)))||(PP.s&&PP.s.some(rw=>/[1-9]/.test(rw))))){
+          const pmP={};const gmP=i=>pmP[i]||(pmP[i]=R.mkMat(parseInt(FACEPAL[i].slice(1),16)));
+          const Hp=d.thigh+d.shin;
+          const segP=yy=>(-yy<=d.thigh)?{P:U,ly:yy,hx:lw,hz:lw}:{P:L,ly:yy+d.thigh,hx:lw*.925,hz:lw*.925};
+          const drawP=(CR,LV,face)=>{
+            if(!CR)return;
+            for(let pr=0;pr<LR;pr++)for(let pc=0;pc<LC;pc++){
+              const col=parseInt((CR[pr]||'')[pc]||'0',36);if(!col)continue;
+              const lv=Math.max(1,parseInt(((LV&&LV[pr])||'')[pc]||'1',36));
+              const yy=-(pr+.5)/LR*Hp, zg=segP(yy);
+              const cH=Hp/LR*1.1, prof=.45+(lv-1)*.55;
+              if(face==='S'){
+                const cW=zg.hx*2/LC*1.1, xx=((pc+.5)/LC-.5)*zg.hx*2;
+                for(const sd of[-1,1])zg.P.add(R.pos(box(cW,cH,prof,gmP(col)),xx,zg.ly,sd*(zg.hz+prof/2)));
+              }else{
+                const cW=zg.hz*2/LC*1.1, zz=((pc+.5)/LC-.5)*zg.hz*2;
+                zg.P.add(R.pos(box(prof,cH,cW,gmP(col)),(face==='F'?(zg.hx+prof/2):-(zg.hx+prof/2)),zg.ly,zz));
+              }
+            }
+          };
+          drawP(PP.f,PP.fl,'F');drawP(PP.b,PP.bl,'B');drawP(PP.s,PP.sl,'S');
+        }
       }
       R.handF.rotation.y=Math.PI/2;R.handB.rotation.y=Math.PI/2;
 
@@ -1221,6 +1284,10 @@ function crGather(){
     torsoF:crTF?crTF.slice():null,torsoFL:crTFL?crTFL.slice():null,
     torsoB:crTB?crTB.slice():null,torsoBL:crTBL?crTBL.slice():null,
     torsoS:crTS?crTS.slice():null,torsoSL:crTSL?crTSL.slice():null,
+    pantsF:crPF?crPF.slice():null,pantsFL:crPFL?crPFL.slice():null,
+    pantsB:crPB?crPB.slice():null,pantsBL:crPBL?crPBL.slice():null,
+    pantsS:crPS?crPS.slice():null,pantsSL:crPSL?crPSL.slice():null,
+    hand:crHand?crHand.slice():null,
     wig:crWig?crWig.slice():null,wigTop:crWigTop?crWigTop.slice():null,wigPreset:v('cr-wigPreset'),_idx:crPanel._idx};
 }
 let crPrev=null, crPrevKey='', crDirty=false, crRebuildT=0;
@@ -1235,6 +1302,7 @@ function crBuildPreview(){
 }
 let crFaceTex=null, crFaceLvl=null, crPalSel=1, crWig=null, crWigTop=null;
 let crTF=null,crTFL=null,crTB=null,crTBL=null,crTS=null,crTSL=null;
+let crPF=null,crPFL=null,crPB=null,crPBL=null,crPS=null,crPSL=null,crHand=null;
 function crBuildPalette(){
   const pal=CE('cr-pal');pal.innerHTML='';
   FACEPAL.forEach((col,i)=>{const b=document.createElement('button');b.className='cr-sw'+(i===crPalSel?' on':'');
@@ -1274,6 +1342,22 @@ function mkPaint(elId,Cn,Rn,getC,getL){
   }
   g._rf();
 }
+function mkLvl(elId,Cn,Rn,get){
+  const g=CE(elId);
+  if(!g.dataset.built){g.style.gridTemplateColumns='repeat('+Cn+',1fr)';
+    for(let r=0;r<Rn;r++)for(let c=0;c<Cn;c++){
+      const d=document.createElement('div');d.className='cr-wcell';
+      const paint=()=>{const A=get();let L=parseInt(A[r][c]||'0',36);L=(L+1)%(WLVL+1);
+        const rr=A[r].split('');rr[c]=L.toString(36);A[r]=rr.join('');g._rf();crUpdatePreview();};
+      d.addEventListener('mousedown',e=>{e.preventDefault();paint();});
+      g.appendChild(d);}
+    g.dataset.built='1';
+    g._rf=()=>{const A=get(),cs=g.children;
+      for(let r=0;r<Rn;r++)for(let c=0;c<Cn;c++)
+        cs[r*Cn+c].style.background=wigShade(parseInt(A[r][c]||'0',36));};
+    PGRIDS.push(g);}
+  g._rf();
+}
 function crBuildFaceUI(){
   crBuildPalette();
   mkPaint('cr-grid',FCOLS,FROWS,()=>crFaceTex,()=>crFaceLvl);
@@ -1283,6 +1367,12 @@ function crBuildTorsoUI(){
   mkPaint('cr-tb',TC,TR,()=>crTB,()=>crTBL);
   mkPaint('cr-ts',TC,TR,()=>crTS,()=>crTSL);
 }
+function crBuildPantsUI(){
+  mkPaint('cr-pf',LC,LR,()=>crPF,()=>crPFL);
+  mkPaint('cr-pb',LC,LR,()=>crPB,()=>crPBL);
+  mkPaint('cr-ps',LC,LR,()=>crPS,()=>crPSL);
+}
+function crBuildHandUI(){mkLvl('cr-hand',HN,HN,()=>crHand);}
 function crRefreshFaceCells(){PGRIDS.forEach(g=>g._rf&&g._rf());}
 function wigShade(L){if(L<=0)return '#20202a';const t=Math.min(L,WLVL)/WLVL;
   const r=Math.round(70+t*120),g=Math.round(44+t*80),b=Math.round(26+t*40);return 'rgb('+r+','+g+','+b+')';}
@@ -1327,7 +1417,12 @@ function openCreator(){
   if(!crTF)crTF=Z(TR,TC);if(!crTFL)crTFL=Z(TR,TC);
   if(!crTB)crTB=Z(TR,TC);if(!crTBL)crTBL=Z(TR,TC);
   if(!crTS)crTS=Z(TR,TC);if(!crTSL)crTSL=Z(TR,TC);
-  crBuildFaceUI();crBuildWigUI();crBuildTorsoUI();crRefreshSlots();crPrevKey='';crBuildPreview();
+  if(!crPF)crPF=Z(LR,LC);if(!crPFL)crPFL=Z(LR,LC);
+  if(!crPB)crPB=Z(LR,LC);if(!crPBL)crPBL=Z(LR,LC);
+  if(!crPS)crPS=Z(LR,LC);if(!crPSL)crPSL=Z(LR,LC);
+  if(!crHand)crHand=Z(HN,HN);
+  crBuildFaceUI();crBuildWigUI();crBuildTorsoUI();crBuildPantsUI();crBuildHandUI();
+  crRefreshSlots();crPrevKey='';crBuildPreview();
 }
 function closeCreator(){
   crPanel.classList.remove('on');
@@ -1355,6 +1450,13 @@ function crLoadInto(cfg,idx){
   crTBL=(cfg.torsoBL&&cfg.torsoBL.length===TR)?cfg.torsoBL.slice():Z2(TR,TC);
   crTS=(cfg.torsoS&&cfg.torsoS.length===TR)?cfg.torsoS.slice():Z2(TR,TC);
   crTSL=(cfg.torsoSL&&cfg.torsoSL.length===TR)?cfg.torsoSL.slice():Z2(TR,TC);
+  crPF=(cfg.pantsF&&cfg.pantsF.length===LR)?cfg.pantsF.slice():Z2(LR,LC);
+  crPFL=(cfg.pantsFL&&cfg.pantsFL.length===LR)?cfg.pantsFL.slice():Z2(LR,LC);
+  crPB=(cfg.pantsB&&cfg.pantsB.length===LR)?cfg.pantsB.slice():Z2(LR,LC);
+  crPBL=(cfg.pantsBL&&cfg.pantsBL.length===LR)?cfg.pantsBL.slice():Z2(LR,LC);
+  crPS=(cfg.pantsS&&cfg.pantsS.length===LR)?cfg.pantsS.slice():Z2(LR,LC);
+  crPSL=(cfg.pantsSL&&cfg.pantsSL.length===LR)?cfg.pantsSL.slice():Z2(LR,LC);
+  crHand=(cfg.hand&&cfg.hand.length===HN)?cfg.hand.slice():Z2(HN,HN);
   crRefreshFaceCells();
   set('cr-wigPreset',cfg.wigPreset||'none');
   crWig=(cfg.wig&&cfg.wig.length===WROWS)?cfg.wig.slice():Array(WROWS).fill('0'.repeat(WCOLS));
@@ -1418,26 +1520,89 @@ CE('cr-close').onclick=closeCreator;
 CE('cr-clearface').onclick=()=>{crFaceTex=Array(FROWS).fill('0'.repeat(FCOLS));crFaceLvl=Array(FROWS).fill('0'.repeat(FCOLS));crRefreshFaceCells();crUpdatePreview();};
 CE('cr-clearwig').onclick=()=>{crWig=Array(WROWS).fill('0'.repeat(WCOLS));crWigTop=Array(WTN).fill('0'.repeat(WTN));crRefreshWigCells();crUpdatePreview();};
 CE('cr-cleartorso').onclick=()=>{const Z=(r,c)=>Array(r).fill('0'.repeat(c));crTF=Z(TR,TC);crTFL=Z(TR,TC);crTB=Z(TR,TC);crTBL=Z(TR,TC);crTS=Z(TR,TC);crTSL=Z(TR,TC);crRefreshFaceCells();crUpdatePreview();};
+function imgToGrid(file,Cn,Rn,done){
+  const rd=new FileReader();
+  rd.onload=()=>{const im=new Image();im.onload=()=>{
+    const cv=document.createElement('canvas');cv.width=Cn;cv.height=Rn;
+    const g2=cv.getContext('2d');
+    const ar=im.width/im.height, gr=Cn/Rn;
+    let sw=im.width, sh=im.height, sx=0, sy=0;
+    if(ar>gr){sw=im.height*gr;sx=(im.width-sw)/2;}
+    else{sh=im.width/gr;sy=(im.height-sh)/2;}
+    g2.drawImage(im,sx,sy,sw,sh,0,0,Cn,Rn);
+    const px=g2.getImageData(0,0,Cn,Rn).data;
+    const rows=[],lrows=[];
+    for(let r=0;r<Rn;r++){let rc='',rl='';
+      for(let c=0;c<Cn;c++){const i=(r*Cn+c)*4;
+        if(px[i+3]<110){rc+='0';rl+='0';continue;}
+        let best=1,bd=1e9;
+        for(let p=1;p<FACEPAL.length;p++){
+          const h=parseInt(FACEPAL[p].slice(1),16);
+          const dr=px[i]-((h>>16)&255),dg=px[i+1]-((h>>8)&255),db=px[i+2]-(h&255);
+          const d=dr*dr+dg*dg+db*db;if(d<bd){bd=d;best=p;}
+        }
+        rc+=best.toString(36);rl+='1';
+      }
+      rows.push(rc);lrows.push(rl);
+    }
+    done(rows,lrows);
+  };im.src=rd.result;};
+  rd.readAsDataURL(file);
+}
+CE('cr-imgface').onclick=()=>CE('cr-imgfacefile').click();
+CE('cr-imgfacefile').onchange=e=>{const f=e.target.files[0];if(!f)return;
+  imgToGrid(f,FCOLS,FROWS,(rc,rl)=>{crFaceTex=rc;crFaceLvl=rl;crRefreshFaceCells();crUpdatePreview();});
+  e.target.value='';};
+let torImgTarget='f';
+CE('cr-imgtf').onclick=()=>{torImgTarget='f';CE('cr-imgtfile').click();};
+CE('cr-imgtb').onclick=()=>{torImgTarget='b';CE('cr-imgtfile').click();};
+CE('cr-imgtfile').onchange=e=>{const f=e.target.files[0];if(!f)return;
+  imgToGrid(f,TC,TR,(rc,rl)=>{
+    if(torImgTarget==='f'){crTF=rc;crTFL=rl;}else{crTB=rc;crTBL=rl;}
+    crRefreshFaceCells();crUpdatePreview();});
+  e.target.value='';};
+CE('cr-clearpants').onclick=()=>{const Z=(r,c)=>Array(r).fill('0'.repeat(c));crPF=Z(LR,LC);crPFL=Z(LR,LC);crPB=Z(LR,LC);crPBL=Z(LR,LC);crPS=Z(LR,LC);crPSL=Z(LR,LC);crRefreshFaceCells();crUpdatePreview();};
+CE('cr-clearhand').onclick=()=>{crHand=Array(HN).fill('0'.repeat(HN));crRefreshFaceCells();crUpdatePreview();};
+let pantTarget='f';
+CE('cr-imgpf').onclick=()=>{pantTarget='f';CE('cr-imgpfile').click();};
+CE('cr-imgpb').onclick=()=>{pantTarget='b';CE('cr-imgpfile').click();};
+CE('cr-imgpfile').onchange=e=>{const f=e.target.files[0];if(!f)return;
+  imgToGrid(f,LC,LR,(rc,rl)=>{
+    if(pantTarget==='f'){crPF=rc;crPFL=rl;}else{crPB=rc;crPBL=rl;}
+    crRefreshFaceCells();crUpdatePreview();});
+  e.target.value='';};
 
 /* ---------- ORGANIZADOR DE TORNEOS ---------- */
 const ORG_KEY='puno_org_v1';
 let ORGS=[];try{const r0=localStorage.getItem(ORG_KEY);ORGS=r0?JSON.parse(r0):[];}catch(e){ORGS=[];}
-let orgImg=null, imgStageTex=null;
-function ensureImgStage(dataURL){
+let orgImgs={back:null,left:null,right:null,floor:null};
+const imgTexes={};
+function ensureImgStage(imgs){
   if(!stages.imagen){
     const g=new THREE.Group();
     const fl=new THREE.Mesh(new THREE.BoxGeometry(60,1,26),mat(0x23232c));
     fl.position.y=-.5;fl.receiveShadow=true;g.add(fl);
-    const bd=new THREE.Mesh(new THREE.PlaneGeometry(46,20),new THREE.MeshBasicMaterial({color:0xffffff}));
-    bd.position.set(0,8.6,-12.5);g.add(bd);
-    g.backdrop=bd;g.sky=0x0a0a12;g.fog=null;
+    const mkP=(w,h)=>new THREE.Mesh(new THREE.PlaneGeometry(w,h),
+      new THREE.MeshBasicMaterial({color:0xffffff}));
+    g.backdrop=mkP(46,20);g.backdrop.position.set(0,8.6,-12.5);g.add(g.backdrop);
+    g.wallL=mkP(30,20);g.wallL.position.set(-24,8.6,0);g.wallL.rotation.y=Math.PI/2;g.add(g.wallL);
+    g.wallR=mkP(30,20);g.wallR.position.set(24,8.6,0);g.wallR.rotation.y=-Math.PI/2;g.add(g.wallR);
+    g.floorP=new THREE.Mesh(new THREE.PlaneGeometry(60,26),
+      new THREE.MeshLambertMaterial({color:0xffffff}));
+    g.floorP.rotation.x=-Math.PI/2;g.floorP.position.y=.02;g.floorP.receiveShadow=true;g.add(g.floorP);
+    g.sky=0x0a0a12;g.fog=null;
     stages.imagen=g;g.visible=false;scene.add(g);
   }
-  const S=stages.imagen;
-  if(imgStageTex&&imgStageTex.userData.src===dataURL)return;
-  const tex=new THREE.TextureLoader().load(dataURL);tex.userData={src:dataURL};
-  if(imgStageTex)imgStageTex.dispose();imgStageTex=tex;
-  S.backdrop.material.map=tex;S.backdrop.material.needsUpdate=true;
+  const S=stages.imagen, mp={back:S.backdrop,left:S.wallL,right:S.wallR,floor:S.floorP};
+  for(const k in mp){
+    const url=imgs&&imgs[k], mesh=mp[k];
+    if(!url){mesh.visible=false;continue;}
+    mesh.visible=true;
+    if(imgTexes[k]&&imgTexes[k].userData.src===url)continue;
+    const tex=new THREE.TextureLoader().load(url);tex.userData={src:url};
+    if(imgTexes[k])imgTexes[k].dispose();imgTexes[k]=tex;
+    mesh.material.map=tex;mesh.material.needsUpdate=true;
+  }
 }
 MUSIC.imagen=MUSIC.arena;
 function orgOpen(){
@@ -1465,17 +1630,17 @@ function orgRead(){
     .filter(c=>c.checked).map(c=>c.dataset.id);
   const pr=document.querySelector('#org-list input[name=orgP]:checked');
   return {name:(CE('org-name').value||'TORNEO').toUpperCase(),type:CE('org-type').value,
-    stage:CE('org-stage').value,img:orgImg,pool,player:pr?pr.value:null};
+    stage:CE('org-stage').value,imgs:{back:orgImgs.back,left:orgImgs.left,right:orgImgs.right,floor:orgImgs.floor},pool,player:pr?pr.value:null};
 }
 function orgNote(t){CE('org-msg').textContent=t;setTimeout(()=>{CE('org-msg').textContent='';},2800);}
 function orgValidate(o){
   if(o.pool.length<2){orgNote('Mínimo 2 participantes');return false;}
   if(!o.player||!o.pool.includes(o.player)){orgNote('Marca TÚ en un participante incluido');return false;}
-  if(o.stage==='imagen'&&!o.img){orgNote('Sube una imagen para el escenario');return false;}
+  if(o.stage==='imagen'&&!(o.imgs&&(o.imgs.back||o.imgs.left||o.imgs.right||o.imgs.floor))){orgNote('Sube al menos una imagen (fondo, lados o suelo)');return false;}
   return true;
 }
 function orgStageFor(o,oppId){
-  if(o.stage==='imagen'){ensureImgStage(o.img);return 'imagen';}
+  if(o.stage==='imagen'){ensureImgStage(o.imgs);return 'imagen';}
   if(o.stage==='auto')return CHARS[oppId].stage;
   return o.stage;
 }
@@ -1544,7 +1709,7 @@ function orgSerialize(o){
   const cust=[],map={};
   o.pool.forEach(id=>{const c=CHARS[id];
     if(c&&c.custom){map[id]='@'+cust.length;cust.push(CUSTOMS[parseInt(id.slice(6))]);}});
-  return {name:o.name,type:o.type,stage:o.stage,img:o.img,
+  return {name:o.name,type:o.type,stage:o.stage,imgs:o.imgs,
     pool:o.pool.map(id=>map[id]||id),player:map[o.player]||o.player,customs:cust};
 }
 function orgDeserialize(d){
@@ -1554,12 +1719,12 @@ function orgDeserialize(d){
     lsSet();loadCustoms(CUSTOMS);rebuildShowcase();
   }
   const mapId=x=>(x&&x[0]==='@')?'custom'+(base+parseInt(x.slice(1))):x;
-  return {name:d.name||'TORNEO',type:d.type||'elim',stage:d.stage||'auto',img:d.img||null,
+  return {name:d.name||'TORNEO',type:d.type||'elim',stage:d.stage||'auto',imgs:(d.imgs||(d.img?{back:d.img}:null)),
     pool:(d.pool||[]).map(mapId).filter(id=>CHARS[id]),player:mapId(d.player)};
 }
 function orgApply(o){
   CE('org-name').value=o.name;CE('org-type').value=o.type;CE('org-stage').value=o.stage;
-  orgImg=o.img||null;CE('org-imgstate').textContent=orgImg?'imagen cargada ✓':'';
+  orgImgs=(o.imgs?{back:o.imgs.back||null,left:o.imgs.left||null,right:o.imgs.right||null,floor:o.imgs.floor||null}:{back:null,left:null,right:null,floor:null});orgImgState();
   orgBuildList(o);
 }
 function orgSlots(){
@@ -1574,13 +1739,21 @@ function orgSlots(){
 }
 CE('org-close').onclick=orgClose;
 CE('org-start').onclick=orgStart;
-CE('org-imgbtn').onclick=()=>CE('org-img').click();
+function orgImgState(){
+  const L={back:'F',left:'I',right:'D',floor:'S'};
+  const on=Object.keys(L).filter(k=>orgImgs[k]).map(k=>L[k]);
+  CE('org-imgstate').textContent=on.length?('cargadas: '+on.join('·')):'';
+}
+let orgImgTarget='back';
+for(const k of['back','left','right','floor'])
+  CE('org-img-'+k).onclick=()=>{orgImgTarget=k;CE('org-img').click();};
+CE('org-imgclear').onclick=()=>{orgImgs={back:null,left:null,right:null,floor:null};orgImgState();};
 CE('org-img').onchange=e=>{const f=e.target.files[0];if(!f)return;
   const rd=new FileReader();
-  rd.onload=()=>{orgImg=rd.result;CE('org-imgstate').textContent='imagen cargada ✓';CE('org-stage').value='imagen';};
-  rd.readAsDataURL(f);};
+  rd.onload=()=>{orgImgs[orgImgTarget]=rd.result;orgImgState();CE('org-stage').value='imagen';};
+  rd.readAsDataURL(f);e.target.value='';};
 CE('org-save').onclick=()=>{const o=orgRead();if(!orgValidate(o))return;
-  const d=orgSerialize(o);if(d.img&&d.img.length>300000)d.img=null;
+  const d=orgSerialize(o);const isz=d.imgs?Object.values(d.imgs).reduce((a,v)=>a+(v?v.length:0),0):0;if(isz>300000)d.imgs=null;
   ORGS.push(d);let ok=true;
   try{localStorage.setItem(ORG_KEY,JSON.stringify(ORGS));}catch(e){ok=false;}
   orgSlots();orgNote(ok?'Guardado ✓':'Guardado en sesión (imagen grande: exporta a archivo)');};
@@ -1686,10 +1859,12 @@ function makeHeadGeo(F){
   geo=geo.toNonIndexed();geo.computeVertexNormals();
   HEADGEOS[key]=geo;return geo;
 }
-const FACEPAL=['transparent','#141010','#f6f2e8','#c83a32','#3a6ad0','#3aa04a','#e8c84a','#7a4a2a','#e08aa8'];
+const FACEPAL=['transparent','#141010','#f6f2e8','#c83a32','#3a6ad0','#3aa04a','#e8c84a','#7a4a2a','#e08aa8',
+  '#8a8f98','#3a3f48','#e07820','#7a1f1a','#1a2a5a','#1f5a2a','#f0cfa0','#3a2a1a'];
 const FCOLS=24, FROWS=28;
 const WCOLS=24, WROWS=12, WTN=10, WLVL=5;
 const TC=16, TR=20;
+const LC=8, LR=24, HN=10;
 function faceTexCanvas(ft){
   const S=12,c=document.createElement('canvas');c.width=FCOLS*S;c.height=FROWS*S;
   const x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);
